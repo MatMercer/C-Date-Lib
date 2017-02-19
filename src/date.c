@@ -3,13 +3,14 @@
 #include <stdbool.h>
 
 typedef enum week_days {
-    SUNDAY,
-    MONDAY,
-    TUESDAY,
-    WEDNESDAY,
-    THURSDAY,
-    FRIDAY,
-    SATURDAY
+    UNDEFINED = 0,
+    SUNDAY = 1,
+    MONDAY = 2,
+    TUESDAY = 3,
+    WEDNESDAY = 4,
+    THURSDAY = 5,
+    FRIDAY = 6,
+    SATURDAY = 7
 } week_day;
 
 typedef enum month_enum {
@@ -48,6 +49,22 @@ typedef struct dates {
     month m; // month
     unsigned int y; // year
 } date;
+
+// Based in https://en.wikipedia.org/wiki/Determination_of_the_day_of_the_week
+unsigned int schwerdtfeger_table[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
+
+void calc_day_of_week(date *d) {
+    unsigned int y = d->y - (d->m < 3);
+    if (y > 1752) {
+        d->w = (y + y/4 - y/100 + y/400 + schwerdtfeger_table[d->m-1] + d->d) % 7;
+        d->w += 1;
+    }
+    else {
+        errno = 22;
+        perror("Error when calculating day of week! Year must be > 1752.");
+        d->w = UNDEFINED;
+    }
+}
 
 bool is_year_bissext(unsigned int y) {
     if (y % 400 == 0) {
@@ -96,10 +113,10 @@ int create_date(date *dt, unsigned int d, month m, unsigned int y) {
         return -1;
     }
 
-    dt->w = MONDAY;
     dt->d = d;
     dt->m = m;
     dt->y = y;
+    calc_day_of_week(dt);
 
     return 0;
 }
@@ -144,7 +161,7 @@ date sum_dates(date dtX, date dtY) {
 }
 
 void print_date(date dt) {
-    printf("%02d/%02d/%04d\n", dt.d, dt.m, dt.y);
+    printf("%02d/%02d/%04d - %1d\n", dt.d, dt.m, dt.y, dt.w);
 }
 
 int main(int argc, char *argv) {
@@ -162,6 +179,7 @@ int main(int argc, char *argv) {
 
     date dt;
     err = create_date(&dt, day, mon, year);
+    print_date(dt);
 
     printf("Insert day... ");
     scanf("%u", &day);
